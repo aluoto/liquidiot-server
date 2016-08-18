@@ -36,6 +36,9 @@ module.exports = function(app, deviceManagerUrl, deviceInfo) {
 
   var templatesDir = "./agentServerTemplateFiles/";
 
+  var mqtt = require('mqtt');
+  var client  = mqtt.connect('mqtt://130.230.16.45:1883');
+
   app.use(function(req, res, next){
     var flag = false;
     //if(req.headers.origin === "http://koodain.herokuapp.com"){
@@ -161,6 +164,7 @@ module.exports = function(app, deviceManagerUrl, deviceInfo) {
               } else {
                 extractAppDescription(aid, function(err, appDescription){
                     if(err){
+                        console.log("error");
                         callback(err);
                     } else {
                         copyFilesToAppDir(aid, function(err){
@@ -203,6 +207,7 @@ module.exports = function(app, deviceManagerUrl, deviceInfo) {
 
     if(req.file) {
       var tmpPath = req.file.path;
+      console.log(tmpPath);
       var targetPath = "./app/" + aid + "/" + aid + ".tgz";
       fs.rename(tmpPath, targetPath, function(err){
         if(err) {
@@ -230,6 +235,7 @@ module.exports = function(app, deviceManagerUrl, deviceInfo) {
 
   function extractAppDescription(aid, callback) {
     var appDir = "./app/" + aid + "/";
+
     fs.readdir(appDir, function(err, files){
       if(err){
             callback(err);
@@ -239,24 +245,28 @@ module.exports = function(app, deviceManagerUrl, deviceInfo) {
         }).filter(function(file){
           return (fs.statSync(file).isDirectory());
         }).forEach(function(file){
-          fs.readFile(file + "/package.json", "utf8", function(err, src){
+
+          //NOTE: /.. is a stupid fix - Antti L.
+          fs.readFile(file + "/../package.json", "utf8", function(err, src){
             if(err) {
+                console.log(err);
                 callback(err);
             } else {
               try{
                 var appDescr = JSON.parse(src);
                 if(appDescr.main) {
-                    fs.stat(file + "/" + appDescr.main, function(err, stat){
+                    //NOTE: /../ is a stupid fix - Antti L.
+                    fs.stat(file + "/../" + appDescr.main, function(err, stat){
                         if(err){
                             callback(err);
                         } else {
-                            fs.readFile(file + "/liquidiot.json", "utf8", function(err, src){
+                            fs.readFile(file + "/../liquidiot.json", "utf8", function(err, src){
                                 if(err){
                                   callback(err);
                                 } else {
                                   try{
                                     var liquidiotJson = JSON.parse(src);
-				    console.log("liquidiotJson: " + liquidiotJson);
+				                            console.log("liquidiotJson: " + liquidiotJson);
                                     if(liquidiotJson.applicationInterfaces) {
                                       appDescr.applicationInterfaces = liquidiotJson.applicationInterfaces;
                                       callback(null, appDescr);
@@ -587,9 +597,9 @@ module.exports = function(app, deviceManagerUrl, deviceInfo) {
                 if(err){
                   console.log(err.toString());
                 } else {
-                  console.log("RAMOVE from dm response: " + response);
+                  console.log("REMOVE from dm response: " + response);
                 }
-		res.status(200).send("Instance is deleted.");
+		          res.status(200).send("Instance is deleted.");
               });
             }
           });
@@ -693,6 +703,8 @@ module.exports = function(app, deviceManagerUrl, deviceInfo) {
 
 
   app.put("/app/:aid", function(req, res){
+    
+    console.log(req.params);
     var aid = parseInt(req.params.aid);
 
     getAppDescr(aid, function(err, appDescr){
@@ -714,7 +726,7 @@ module.exports = function(app, deviceManagerUrl, deviceInfo) {
                           } else {
                             console.log("update on dm response: " + response);
                           }
-			  res.status(200).send(JSON.stringify(appDescr));
+                        res.status(200).send(JSON.stringify(appDescr));
                         });
                     }
                 });
@@ -762,10 +774,255 @@ module.exports = function(app, deviceManagerUrl, deviceInfo) {
     });
   }
 
+  function startOrStopInstanceMQTT(message, aid, callback){
 
+    try {
+      var targetState = {'status': message.toString()};
+      var url = "http://localhost:" + ports[aid] + "/";
+
+      var options = {
+        uri: url,
+        method: 'PUT',
+        json: targetState
+      };
+      console.log(targetState);
+
+      if(targetState.status === "running" || targetState.status === "paused") {
+          request(options, function(err, ress, body){
+              if(err) {
+                  callback(err);
+              } else if(ress.statusCode == 200){
+                  console.log(body + typeof(body));
+                  callback(null, body.status);
+                  //callback(null, JSON.parse(body).status);
+              } else if(ress.statusCode == 204) {
+                  callback(null, "running");
+              } else {
+                  callback(new Error("error"));
+              }
+          });
+      } else {
+          callback(new Error("The content of request should be running or paused"));
+      }
+    } catch(e) {
+        callback(e);
+    }
+  
+  }
 ///////////////////////////////////////////////////////////////////
 //////// Specific Instance Related Functions - END ////////////////
 ///////////////////////////////////////////////////////////////////
+
+
+
+  client.on('connect', function () {
+      //subscribe to new apps
+      client.subscribe('device/app');
+      //subscribe to new apps for a certain device
+      client.subscribe('device/' + deviceInfo.idFromDM + '/app');
+      client.subscribe('device/' + deviceInfo.idFromDM + '/apps/delete');
+
+      //publish empty apps list
+      client.publish('device/' + deviceInfo.idFromDM + '/apps', JSON.stringify(apps), {retain: true});
+      
+
+      client.publish('device/debug', 'debug', {retain: true});
+
+      //update certain app
+      //client.subscribe('device/' + deviceInfo.idFromDM + '/app/' + aid + '/update');
+
+  });
+  /*
+      //delete certain app
+      client.subscribe('device/' + deviceInfo.idFromDM + '/app/944996/delete');
+      //publish info about certain app
+      client.publish('device/' + deviceInfo.idFromDM + '/app/944996', info);
+
+      //status subscribe
+      client.subsribe('device/' + deviceInfo.idFromDM + '/app/944996/status/new')
+      //status publish
+      
+      //if status is running
+      client.publish('device/' + deviceInfo.idFromDM + '/app/944996/status', 'running');
+      //else if initializing
+      //else if paused
+
+      else
+      //client.publish('device/' + deviceInfo.idFromDM + '/status', 'crashed');
+  });*/
+
+  client.on('message', function (topic, message) {
+    // message is Buffer
+    console.log("Apps available:");
+    console.log(apps);
+
+    console.log("Message received to topic: " + topic);
+    console.log(message.toString());
+
+    //create new app
+    if(topic === 'device/' + deviceInfo.idFromDM + '/app') {
+      
+
+
+      var req = {};
+      req.file = message;
+      req.file.path = './uploads/mqttUpload';
+      
+      fs.writeFile('./uploads/mqttUpload', message, function(err) {
+          if(err) {
+              return console.log(err);
+          }
+
+          console.log("The file was saved!");
+      });
+
+      // creating the specific id for application
+      var aid = ((new Date()).getTime()) % 1000000;
+      installApp(req, aid, function(err, appDescr){
+        if(err) {
+          console.log(err.toString());
+        } else {
+          appDescr.id = aid;
+          appDescr.status = "initializing";
+          apps.push(appDescr);
+          
+          client.subscribe('device/' + deviceInfo.idFromDM + '/app/' + aid + '/delete');
+          client.subscribe('device/' + deviceInfo.idFromDM + '/app/' + aid + '/status');
+          //publish updated apps list. This could better be later in the function?
+          client.publish('device/' + deviceInfo.idFromDM + '/apps', JSON.stringify(apps), {retain: true});
+          
+          instanciate(appDescr, function(err, appStatus){
+            if(err) {
+              console.log(err.toString());
+            } else {
+              appDescr.status = appStatus;
+              dm.addAppInfo(appDescr, function(err, ress){
+                if(err) {
+                  console.log(err.toString());
+                } else {
+                  console.log("ADD to dm response: " + ress);
+                }
+                //update to 'running'
+                client.publish('device/' + deviceInfo.idFromDM + '/apps', JSON.stringify(apps), {retain: true});
+                console.log(JSON.stringify(appDescr));
+              });
+            }
+          });
+        }
+      });
+    }
+
+    //delete all apps
+    else if (topic === 'device/' + deviceInfo.idFromDM + '/apps/delete') {
+
+      deleteApps(function(err){
+        if(err){
+          console.log(err.toString());
+        } else {
+          console.log("all apps deleted.");
+        }
+      }); 
+
+    }
+
+
+
+
+    else {
+
+
+      //Delete one app.
+      //Is better that the message contains the id or should the topic name contain it?
+
+      for(var i = 0; i < apps.length; ++i) {
+
+        if (topic === 'device/' + deviceInfo.idFromDM + '/app/' + apps[i].id + '/delete') {
+            
+          var aid = apps[i].id;
+
+          getAppDescr(aid, function(err, appDescr){
+            if(err) {
+              console.log(err.toString());
+            } else {
+
+              deleteApp(appDescr, function(err){
+                if(err) {
+                  console.log(err.toString());
+                } else {
+                  dm.removeAppInfo(appDescr, function(err, response){
+                    if(err){
+                      console.log(err.toString());
+                    } else {
+                      console.log("REMOVE from dm response: " + response);
+                    }
+                  console.log("Instance is deleted.");
+                  });
+                }
+              });
+            }
+          });          
+        }
+
+        else if (topic === 'device/' + deviceInfo.idFromDM + '/app/' + apps[i].id + '/status') {
+
+          var aid = apps[i].id;
+          var req = {};
+          var res = {};
+          if (message === 'running') {
+            req.data = {'status': 'running'};
+          }
+          else if (message === 'paused') {
+            req.data = {'status': 'paused'};
+          }
+
+
+          getAppDescr(aid, function(err, appDescr){
+              if(err){
+                  console.log(err.toString());
+              } else {
+                  if(appDescr.status == "crashed" || appDescr.status == "initializing"){
+                      console.log.send(JSON.stringify(appDescr))
+                  } else {
+                      startOrStopInstanceMQTT(message, aid, function(err, appStatus){
+                          if(err){
+                              console.log(err.toString());
+                          } else {
+                              appDescr.status = appStatus;
+                              
+                              //Always remember to update the app info.
+                              //Should be done to individual apps as well.
+                              client.publish('device/' + deviceInfo.idFromDM + '/apps', JSON.stringify(apps), {retain: true});                              
+                              
+                              //var appIndex = appIndexOf(aid, "id");
+                              dm.updateAppInfo(appDescr, function(err, response){
+                                if(err){
+                                  console.log("update erro: " + err.toString());
+                                } else {
+                                  console.log("update on dm response: " + response);
+                                }
+                              console.log(JSON.stringify(appDescr));
+                              });
+                          }
+                      });
+                  }
+              }
+          });
+        }
+
+
+      }
+
+
+    }
+
+    
+
+    //create a new function using the message
+    //(new Function(message.toString()))();
+
+    //stop receiving messages
+    //client.end();
+  });
 
 }
 

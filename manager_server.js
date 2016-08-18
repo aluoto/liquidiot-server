@@ -12,7 +12,6 @@ var request = require("request");
 var express = require("express");
 var app = express();
 
-
 getDeviceInfo(function(err, deviceInfo){
     if(err){
         console.log(err.toString());
@@ -139,7 +138,7 @@ function registerToBackend(deviceInfo, backendInfo, callback){
             };
 
             request(options, function(err, res, body){
-                console.log("satatus code" + res.statusCode);
+                console.log("satatus code: " + res.statusCode);
                 if(!err && res.statusCode == 201) {
                     console.log("body: " + body);
                     console.log(typeof(body));
@@ -155,7 +154,7 @@ function registerToBackend(deviceInfo, backendInfo, callback){
                         }
                     });
                 } else {
-                    console.log(err.toString());
+                    console.log(err);
                     callback(err);
                 }
             });
@@ -164,9 +163,19 @@ function registerToBackend(deviceInfo, backendInfo, callback){
 
 function start(deviceInfo, deviceManagerInfo){
   require("./router/main")(app, deviceManagerInfo.url, deviceInfo);
+
+  console.log(deviceInfo);
+
+
+
+
+
+
   var server = app.listen(8000, function(){
-    console.log("server started");  
+    console.log("server started");
+
   });
+
 }
 
 
