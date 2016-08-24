@@ -246,8 +246,7 @@ module.exports = function(app, deviceManagerUrl, deviceInfo) {
           return (fs.statSync(file).isDirectory());
         }).forEach(function(file){
 
-          //NOTE: /.. is a stupid fix - Antti L.
-          fs.readFile(file + "/../package.json", "utf8", function(err, src){
+          fs.readFile(file + "/package.json", "utf8", function(err, src){
             if(err) {
                 console.log(err);
                 callback(err);
@@ -255,12 +254,12 @@ module.exports = function(app, deviceManagerUrl, deviceInfo) {
               try{
                 var appDescr = JSON.parse(src);
                 if(appDescr.main) {
-                    //NOTE: /../ is a stupid fix - Antti L.
-                    fs.stat(file + "/../" + appDescr.main, function(err, stat){
+
+                    fs.stat(file + "/" + appDescr.main, function(err, stat){
                         if(err){
                             callback(err);
                         } else {
-                            fs.readFile(file + "/../liquidiot.json", "utf8", function(err, src){
+                            fs.readFile(file + "/liquidiot.json", "utf8", function(err, src){
                                 if(err){
                                   callback(err);
                                 } else {
@@ -890,7 +889,8 @@ module.exports = function(app, deviceManagerUrl, deviceInfo) {
           client.subscribe('device/' + deviceInfo.idFromDM + '/app/' + aid + '/status');
           //publish updated apps list. This could better be later in the function?
           client.publish('device/' + deviceInfo.idFromDM + '/apps', JSON.stringify(apps), {retain: true});
-          
+          client.publish('deployment', 'ok');
+
           instanciate(appDescr, function(err, appStatus){
             if(err) {
               console.log(err.toString());
