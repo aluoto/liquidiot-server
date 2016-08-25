@@ -10,10 +10,19 @@ module.exports = function(deviceManagerUrl, deviceInfo) {
   
 
   var request = require("request");
+  var mqtt = require('mqtt');
 
   module.addAppInfo = function(appDescr, callback) {
+
+      var tempClient  = mqtt.connect('mqtt://130.230.16.45:1883');
+      tempClient.on('connect', function () {
+
+          tempClient.publish('device/' + deviceInfo.idFromDM + '/app/descr', JSON.stringify(appDescr));
+      });
+
+      /* //commented out because of mqtt testing
       var url = deviceManagerUrl + deviceInfo.idFromDM + "/apps";
-      console.log("This is the url" + url);
+      console.log("This is the device manager url: " + url);
       var options = {
           uri: url,
           method: 'POST',
@@ -30,7 +39,7 @@ module.exports = function(deviceManagerUrl, deviceInfo) {
           } else {
               callback(new Error(body));
           }
-      });
+      });*/
   };
 
   module.removeAppInfo = function(appDescr, callback){

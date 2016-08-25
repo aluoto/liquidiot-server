@@ -94,24 +94,24 @@ module.exports = function(app, deviceManagerUrl, deviceInfo) {
 ///////////////////////////////////////////////////////////////////
 
 
-  function sendAppInfoToDeviceManafer(appDescr, callback){
+  function sendAppInfoToDeviceManager(appDescr, callback){
+    
+    var url = deviceManagerUrl + deviceInfo.id + "/apps";
+    var options = {
+      uri: url,
+      method: 'POST',
+      json: appDescr
+    };
 
-        var url = deviceManagerUrl + deviceInfo.id + "/apps";
-        var options = {
-          uri: url,
-          method: 'POST',
-          json: appDescr
-        };
-
-        request(options, function(err, res, body){
-            if(err) {
-                callback(err);
-            } else if(res.statusCode == 200){
-                console.log(body + " : " + typeof(body));
-                callback(null, body);
-                //callback(null, JSON.parse(body).status);
-            }
-        });
+    request(options, function(err, res, body){
+        if(err) {
+            callback(err);
+        } else if(res.statusCode == 200){
+            console.log(body + " : " + typeof(body));
+            callback(null, body);
+            //callback(null, JSON.parse(body).status);
+        }
+    });
   }
  
 
@@ -139,6 +139,7 @@ module.exports = function(app, deviceManagerUrl, deviceInfo) {
               } else {
                 console.log("ADD to dm response: " + ress);
               }
+              //sendAppInfoToDeviceManager(appDescr);
               res.status(200).send(JSON.stringify(appDescr));
             });
           }
