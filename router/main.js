@@ -776,6 +776,7 @@ module.exports = function(app, deviceManagerUrl, deviceInfo) {
 
   function startOrStopInstanceMQTT(message, aid, callback){
 
+    //using the "internal" REST interface of the device server
     try {
       var targetState = {'status': message.toString()};
       var url = "http://localhost:" + ports[aid] + "/";
@@ -823,7 +824,7 @@ module.exports = function(app, deviceManagerUrl, deviceInfo) {
       client.subscribe('device/' + deviceInfo.idFromDM + '/apps/delete');
 
       //publish empty apps list
-      client.publish('device/' + deviceInfo.idFromDM + '/apps', JSON.stringify(apps), {retain: true});
+      client.publish('device/' + deviceInfo.idFromDM + '/apps', JSON.stringify(apps)/*, {retain: true}*/);
       
 
       client.publish('device/debug', 'debug', {retain: true});
@@ -857,13 +858,11 @@ module.exports = function(app, deviceManagerUrl, deviceInfo) {
     console.log(apps);
 
     console.log("Message received to topic: " + topic);
-    console.log(message.toString());
+    //console.log(message.toString());
 
     //create new app
     if(topic === 'device/' + deviceInfo.idFromDM + '/app') {
       
-
-
       var req = {};
       req.file = message;
       req.file.path = './uploads/mqttUpload';
@@ -886,17 +885,28 @@ module.exports = function(app, deviceManagerUrl, deviceInfo) {
           appDescr.status = "initializing";
           apps.push(appDescr);
           
+          console.log("apps: " + JSON.stringify(apps));
+
           client.subscribe('device/' + deviceInfo.idFromDM + '/app/' + aid + '/delete');
           client.subscribe('device/' + deviceInfo.idFromDM + '/app/' + aid + '/status');
+          
           //publish updated apps list. This could better be later in the function?
-          client.publish('device/' + deviceInfo.idFromDM + '/apps', JSON.stringify(apps), {retain: true});
-          client.publish('deployment', 'ok');
+          //client.publish('device/' + deviceInfo.idFromDM + '/apps', JSON.stringify(apps), {retain: true});
+          
+          //publish deployment result
+          client.publish('deployment/' + deviceInfo.idFromDM, 'ok');
 
           instanciate(appDescr, function(err, appStatus){
             if(err) {
               console.log(err.toString());
             } else {
               appDescr.status = appStatus;
+              
+              console.log("APP-STATUS: "  + appStatus);
+              client.publish('device/' + deviceInfo.idFromDM + '/apps', JSON.stringify(appDescr)/*, {retain: true}*/);
+
+              //updateAppInfo could be used after add AppInfo
+
               dm.addAppInfo(appDescr, function(err, ress){
                 if(err) {
                   console.log(err.toString());
@@ -904,7 +914,7 @@ module.exports = function(app, deviceManagerUrl, deviceInfo) {
                   console.log("ADD to dm response: " + ress);
                 }
                 //update to 'running'
-                client.publish('device/' + deviceInfo.idFromDM + '/apps', JSON.stringify(apps), {retain: true});
+                //client.publish('device/' + deviceInfo.idFromDM + '/apps', JSON.stringify(appDescr), {retain: true});
                 console.log(JSON.stringify(appDescr));
               });
             }
@@ -966,6 +976,7 @@ module.exports = function(app, deviceManagerUrl, deviceInfo) {
 
         else if (topic === 'device/' + deviceInfo.idFromDM + '/app/' + apps[i].id + '/status') {
 
+          console.log("received status change to: " + apps[i].id);
           var aid = apps[i].id;
           var req = {};
           var res = {};
@@ -992,7 +1003,7 @@ module.exports = function(app, deviceManagerUrl, deviceInfo) {
                               
                               //Always remember to update the app info.
                               //Should be done to individual apps as well.
-                              client.publish('device/' + deviceInfo.idFromDM + '/apps', JSON.stringify(apps), {retain: true});                              
+                              client.publish('device/' + deviceInfo.idFromDM + '/apps', JSON.stringify(apps)/*, {retain: true}*/);                              
                               
                               //var appIndex = appIndexOf(aid, "id");
                               dm.updateAppInfo(appDescr, function(err, response){

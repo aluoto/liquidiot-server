@@ -17,7 +17,7 @@ module.exports = function(deviceManagerUrl, deviceInfo) {
       var tempClient  = mqtt.connect('mqtt://130.230.16.45:1883');
       tempClient.on('connect', function () {
 
-          tempClient.publish('device/' + deviceInfo.idFromDM + '/app/descr', JSON.stringify(appDescr));
+          tempClient.publish('device/' + deviceInfo.idFromDM + '/apps/' + appDescr.id, JSON.stringify(appDescr));
       });
 
       /* //commented out because of mqtt testing
@@ -65,6 +65,14 @@ module.exports = function(deviceManagerUrl, deviceInfo) {
   }
   
   module.updateAppInfo = function(appDescr, callback){
+
+      var tempClient  = mqtt.connect('mqtt://130.230.16.45:1883');
+      tempClient.on('connect', function () {
+
+          tempClient.publish('device/' + deviceInfo.idFromDM + '/apps/' + appDescr.id, JSON.stringify(appDescr));
+      });
+
+/*
       var aid = appDescr.id;
       var url = deviceManagerUrl + deviceInfo.idFromDM + "/apps/" + aid;
       console.log("This is the url: " + url);
@@ -83,7 +91,7 @@ module.exports = function(deviceManagerUrl, deviceInfo) {
           } else {
               callback(new Error(body));
           }
-      });
+      });*/
   }
 
   return module;
