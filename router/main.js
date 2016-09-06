@@ -888,7 +888,7 @@ module.exports = function(app, deviceManagerUrl, deviceInfo) {
           console.log("apps: " + JSON.stringify(apps));
 
           client.subscribe('device/' + deviceInfo.idFromDM + '/app/' + aid + '/delete');
-          client.subscribe('device/' + deviceInfo.idFromDM + '/app/' + aid + '/status');
+          client.subscribe('device/' + deviceInfo.idFromDM + '/apps/' + aid + '/status');
           
           //publish updated apps list. This could better be later in the function?
           //client.publish('device/' + deviceInfo.idFromDM + '/apps', JSON.stringify(apps), {retain: true});
@@ -974,18 +974,22 @@ module.exports = function(app, deviceManagerUrl, deviceInfo) {
           });          
         }
 
-        else if (topic === 'device/' + deviceInfo.idFromDM + '/app/' + apps[i].id + '/status') {
+        else if (topic === 'device/' + deviceInfo.idFromDM + '/apps/' + apps[i].id + '/status') {
 
-          console.log("received status change to: " + apps[i].id);
+          console.log("received status change to app: " + apps[i].id);
           var aid = apps[i].id;
           var req = {};
           var res = {};
-          if (message === 'running') {
+          var status = JSON.parse(message);
+
+          //req.data = message;
+          /*
+          if (message === '{"status": "running"}') {
             req.data = {'status': 'running'};
           }
           else if (message === 'paused') {
             req.data = {'status': 'paused'};
-          }
+          }*/
 
 
           getAppDescr(aid, function(err, appDescr){
@@ -995,7 +999,7 @@ module.exports = function(app, deviceManagerUrl, deviceInfo) {
                   if(appDescr.status == "crashed" || appDescr.status == "initializing"){
                       console.log.send(JSON.stringify(appDescr))
                   } else {
-                      startOrStopInstanceMQTT(message, aid, function(err, appStatus){
+                      startOrStopInstanceMQTT(status.status, aid, function(err, appStatus){
                           if(err){
                               console.log(err.toString());
                           } else {
