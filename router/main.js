@@ -774,11 +774,15 @@ module.exports = function(app, deviceManagerUrl, deviceInfo) {
     });
   }
 
-  function startOrStopInstanceMQTT(message, aid, callback){
+  function startOrStopInstanceMQTT(status, aid, callback){
+
+
+    console.log("startOrStopInstanceMQTT:");
+    console.log(status.toString());
 
     //using the "internal" REST interface of the device server
     try {
-      var targetState = {'status': message.toString()};
+      var targetState = {'status': status.toString()};
       var url = "http://localhost:" + ports[aid] + "/";
 
       var options = {
@@ -786,7 +790,8 @@ module.exports = function(app, deviceManagerUrl, deviceInfo) {
         method: 'PUT',
         json: targetState
       };
-      console.log(targetState);
+
+      //console.log(targetState);
 
       if(targetState.status === "running" || targetState.status === "paused") {
           request(options, function(err, ress, body){
@@ -794,10 +799,14 @@ module.exports = function(app, deviceManagerUrl, deviceInfo) {
                   callback(err);
               } else if(ress.statusCode == 200){
                   console.log(body + typeof(body));
+                  console.log(body.status + ".......................");
                   callback(null, body.status);
                   //callback(null, JSON.parse(body).status);
               } else if(ress.statusCode == 204) {
-                  callback(null, "running");
+                  console.log("No content!!!!!!!!!!!!!!!!!!!!");
+                  callback(null, status.toString());
+                  //i think it is weird that this was originally set "running on default"
+                  //callback(null, "running");
               } else {
                   callback(new Error("error"));
               }
@@ -976,12 +985,14 @@ module.exports = function(app, deviceManagerUrl, deviceInfo) {
 
         else if (topic === 'device/' + deviceInfo.idFromDM + '/apps/' + apps[i].id + '/status') {
 
-          console.log("received status change to app: " + apps[i].id);
+          console.log("received status change to app: " + apps[i].id + " - " + apps[i].status);
           var aid = apps[i].id;
           var req = {};
           var res = {};
           var status = JSON.parse(message);
-
+          console.log("---------------------------------------------------------------------");
+          console.log(status);
+          console.log(status.status);
           //req.data = message;
           /*
           if (message === '{"status": "running"}') {
@@ -997,17 +1008,21 @@ module.exports = function(app, deviceManagerUrl, deviceInfo) {
                   console.log(err.toString());
               } else {
                   if(appDescr.status == "crashed" || appDescr.status == "initializing"){
-                      console.log.send(JSON.stringify(appDescr))
+                      console.log(JSON.stringify(appDescr))
                   } else {
                       startOrStopInstanceMQTT(status.status, aid, function(err, appStatus){
                           if(err){
                               console.log(err.toString());
                           } else {
                               appDescr.status = appStatus;
-                              
+                              console.log("!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!");
+                              console.log(appStatus);
+                              //apps[i].status = status.status;
+
                               //Always remember to update the app info.
                               //Should be done to individual apps as well.
-                              client.publish('device/' + deviceInfo.idFromDM + '/apps', JSON.stringify(apps)/*, {retain: true}*/);                              
+                              //client.publish('device/' + deviceInfo.idFromDM + '/apps', JSON.stringify(apps)/*, {retain: true}*/);                              
+                              client.publish('device/' + deviceInfo.idFromDM + '/apps', JSON.stringify(appDescr)/*, {retain: true}*/);                                                            
                               
                               //var appIndex = appIndexOf(aid, "id");
                               dm.updateAppInfo(appDescr, function(err, response){

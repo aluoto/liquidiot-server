@@ -69,7 +69,7 @@ module.exports = function(deviceManagerUrl, deviceInfo) {
       var tempClient  = mqtt.connect('mqtt://130.230.16.45:1883');
       tempClient.on('connect', function () {
 
-          tempClient.publish('device/' + deviceInfo.idFromDM + '/apps/' + appDescr.id, JSON.stringify(appDescr));
+          //tempClient.publish('device/' + deviceInfo.idFromDM + '/apps/' + appDescr.id, JSON.stringify(appDescr));
       });
 
 /*
