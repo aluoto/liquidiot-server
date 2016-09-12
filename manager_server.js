@@ -83,15 +83,46 @@ function getBackendInfo(callback){
 }
 
 function registerToDeviceManager(deviceInfo, deviceManagerInfo, callback){
+        
+        var mqtt = require('mqtt');
+        var client  = mqtt.connect('mqtt://130.230.16.45:1883');
+
+
         if(deviceInfo.idFromDM){
             // If the device info has an id, it means that it has been already added to device manager server.
             // The device info should be checked on the server, may be, there is a need to update the info.
             console.log("already registered to DM");
             callback(null)
         } else {
+            
             // The device info should be added to the device manager server. Server will create an ID.
             // Then the id will be added to the device info file.
             
+            //ADD MQTT PUBLISH HERE
+            client.on('connect', function () {
+                console.log("adding a new device with mqtt")
+                client.publish('device', JSON.stringify(deviceInfo));
+                client.subscribe('device/idfromdm');
+            });
+
+            client.on('message', function (topic, message) {
+                
+                if(topic === 'device/idfromdm') {
+                    deviceInfo.idFromDM = message.toString();
+                    fs.writeFile("./config.txt", JSON.stringify(deviceInfo), function(err){
+                        if(err){
+                            console.log(err.toString());
+                            callback(err);
+                        } else {
+                            console.log("now registered to DM");
+                            callback(null);
+                        }
+                    });
+                }
+
+            });
+
+            /*
             var options = {
                 uri: deviceManagerInfo.url,
                 method: 'POST',
@@ -115,7 +146,8 @@ function registerToDeviceManager(deviceInfo, deviceManagerInfo, callback){
                     console.log(err.toString());
                     callback(err);
                 }
-            });
+            });*/
+            
         }
 }
 

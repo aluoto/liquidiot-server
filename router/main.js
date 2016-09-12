@@ -826,6 +826,11 @@ module.exports = function(app, deviceManagerUrl, deviceInfo) {
 
 
   client.on('connect', function () {
+      
+      //console.log("ID FROM DM: " + deviceInfo.idFromDM);
+
+      //client.subscribe('device/idfromdm');
+
       //subscribe to new apps
       client.subscribe('device/app');
       //subscribe to new apps for a certain device
@@ -868,6 +873,20 @@ module.exports = function(app, deviceManagerUrl, deviceInfo) {
 
     console.log("Message received to topic: " + topic);
     //console.log(message.toString());
+
+    if (topic === 'device/idfromdm') {
+        console.log("received id from dm");
+        deviceInfo.idFromDM = message.toString();
+        fs.writeFile("./config.txt", JSON.stringify(deviceInfo), function(err){
+                if(err){
+                    console.log(err.toString());
+                    callback(err);
+                } else {
+                    console.log("now registered to DM");
+                    callback(null);
+                }
+        });
+    }
 
     //create new app
     if(topic === 'device/' + deviceInfo.idFromDM + '/app') {
