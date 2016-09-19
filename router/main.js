@@ -874,6 +874,8 @@ module.exports = function(app, deviceManagerUrl, deviceInfo) {
     console.log("Message received to topic: " + topic);
     //console.log(message.toString());
 
+    //hopefully commenting this won't have side effects:
+    /*
     if (topic === 'device/idfromdm') {
         console.log("received id from dm");
         deviceInfo.idFromDM = message.toString();
@@ -886,7 +888,7 @@ module.exports = function(app, deviceManagerUrl, deviceInfo) {
                     callback(null);
                 }
         });
-    }
+    }*/
 
     //create new app
     if(topic === 'device/' + deviceInfo.idFromDM + '/app') {

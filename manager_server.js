@@ -11,6 +11,7 @@ var fs = require("fs.extra");
 var request = require("request");
 var express = require("express");
 var app = express();
+var uuid = require('node-uuid');
 
 getDeviceInfo(function(err, deviceInfo){
     if(err){
@@ -95,19 +96,23 @@ function registerToDeviceManager(deviceInfo, deviceManagerInfo, callback){
             callback(null)
         } else {
             
+
+            var mqttId = uuid.v1();
             // The device info should be added to the device manager server. Server will create an ID.
             // Then the id will be added to the device info file.
             
             //ADD MQTT PUBLISH HERE
             client.on('connect', function () {
                 console.log("adding a new device with mqtt")
-                client.publish('device', JSON.stringify(deviceInfo));
-                client.subscribe('device/idfromdm');
+                client.publish('device/request/' + mqttId, JSON.stringify(deviceInfo));
+
+                client.subscribe('device/reply/' + mqttId);
+                console.log(mqttId);
+                //client.subscribe('device/idfromdm');
             });
 
             client.on('message', function (topic, message) {
-                
-                if(topic === 'device/idfromdm') {
+                if(topic === 'device/reply/' + mqttId) {
                     deviceInfo.idFromDM = message.toString();
                     fs.writeFile("./config.txt", JSON.stringify(deviceInfo), function(err){
                         if(err){
