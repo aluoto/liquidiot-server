@@ -1040,7 +1040,7 @@ module.exports = function(app, deviceManagerUrl, deviceInfo) {
                               //Always remember to update the app info.
                               //Should be done to individual apps as well.
                               //client.publish('device/' + deviceInfo.idFromDM + '/apps', JSON.stringify(apps)/*, {retain: true}*/);                              
-                              client.publish('device/' + deviceInfo.idFromDM + '/apps', JSON.stringify(appDescr)/*, {retain: true}*/);                                                            
+                              client.publish('device/' + deviceInfo.idFromDM + '/apps/' + appDescr.id, JSON.stringify(appDescr)/*, {retain: true}*/);                                                            
                               
                               //var appIndex = appIndexOf(aid, "id");
                               dm.updateAppInfo(appDescr, function(err, response){
