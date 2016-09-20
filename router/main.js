@@ -827,19 +827,13 @@ module.exports = function(app, deviceManagerUrl, deviceInfo) {
 
   client.on('connect', function () {
       
-      //console.log("ID FROM DM: " + deviceInfo.idFromDM);
-
-      //client.subscribe('device/idfromdm');
-
-      //subscribe to new apps
-      client.subscribe('device/app');
-      //subscribe to new apps for a certain device
-      client.subscribe('device/' + deviceInfo.idFromDM + '/app');
-      client.subscribe('device/' + deviceInfo.idFromDM + '/apps/delete');
-
-      //publish empty apps list
-      client.publish('device/' + deviceInfo.idFromDM + '/apps', JSON.stringify(apps)/*, {retain: true}*/);
+      //subscribe to new apps for a certain device: 'deployment'
+      client.subscribe('device/' + deviceInfo.idFromDM + '/app/request/+');
       
+      //client.subscribe('device/' + deviceInfo.idFromDM + '/apps/delete');
+
+      //publish apps list. it might be empty.
+      client.publish('device/' + deviceInfo.idFromDM + '/apps', JSON.stringify(apps)/*, {retain: true}*/);
 
       client.publish('device/debug', 'debug', {retain: true});
 
@@ -891,7 +885,8 @@ module.exports = function(app, deviceManagerUrl, deviceInfo) {
     }*/
 
     //create new app
-    if(topic === 'device/' + deviceInfo.idFromDM + '/app') {
+    console.log(topic.substr(0, 43));
+    if(topic.substr(0, 43) === 'device/' + deviceInfo.idFromDM + '/app/request') {
       
       var req = {};
       req.file = message;
@@ -917,14 +912,16 @@ module.exports = function(app, deviceManagerUrl, deviceInfo) {
           
           console.log("apps: " + JSON.stringify(apps));
 
-          client.subscribe('device/' + deviceInfo.idFromDM + '/app/' + aid + '/delete');
+          //client.subscribe('device/' + deviceInfo.idFromDM + '/app/' + aid + '/delete');
           client.subscribe('device/' + deviceInfo.idFromDM + '/apps/' + aid + '/status');
           
           //publish updated apps list. This could better be later in the function?
           //client.publish('device/' + deviceInfo.idFromDM + '/apps', JSON.stringify(apps), {retain: true});
           
           //publish deployment result
-          client.publish('deployment/' + deviceInfo.idFromDM, 'ok');
+          var requestId = topic.substr(44, 44 + topic.length);
+          console.log(requestId);
+          client.publish('device/' + deviceInfo.idFromDM + '/app/reply/' + requestId, 'ok');
 
           instanciate(appDescr, function(err, appStatus){
             if(err) {
