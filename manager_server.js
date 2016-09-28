@@ -23,12 +23,10 @@ getDeviceInfo(function(err, deviceInfo){
                 console.log(err.toString());
             } else {
                 //console.log(deviceManagerInfo);
-
 		registerToDeviceManager(deviceInfo, deviceManagerInfo, function(err){
 	            if(err){
 	                console.log(err.toString());
 	            } else {
-                        
                         getBackendInfo(function(err, backendInfo){
                             if(err){
                                 console.log(err.toString());
@@ -84,10 +82,8 @@ function getBackendInfo(callback){
 }
 
 function registerToDeviceManager(deviceInfo, deviceManagerInfo, callback){
-        
         var mqtt = require('mqtt');
-        var client  = mqtt.connect('mqtt://130.230.16.45:1883');
-
+        var client  = mqtt.connect('mqtt://130.230.142.101:1883');
 
         if(deviceInfo.idFromDM){
             // If the device info has an id, it means that it has been already added to device manager server.
@@ -96,22 +92,21 @@ function registerToDeviceManager(deviceInfo, deviceManagerInfo, callback){
             callback(null)
         } else {
             
-
             var mqttId = uuid.v1();
             // The device info should be added to the device manager server. Server will create an ID.
             // Then the id will be added to the device info file.
-            
+
             //ADD MQTT PUBLISH HERE
             client.on('connect', function () {
                 console.log("adding a new device with mqtt")
                 client.publish('device/request/' + mqttId, JSON.stringify(deviceInfo));
 
                 client.subscribe('device/reply/' + mqttId);
-                console.log(mqttId);
-                //client.subscribe('device/idfromdm');
+                console.log('device/reply/' + mqttId);
+
             });
 
-            client.on('message', function (topic, message) {
+             client.on('message', function (topic, message) {
                 if(topic === 'device/reply/' + mqttId) {
                     deviceInfo.idFromDM = message.toString();
                     fs.writeFile("./config.txt", JSON.stringify(deviceInfo), function(err){
@@ -126,6 +121,7 @@ function registerToDeviceManager(deviceInfo, deviceManagerInfo, callback){
                 }
 
             });
+
 
             /*
             var options = {
@@ -199,6 +195,7 @@ function registerToBackend(deviceInfo, backendInfo, callback){
 }
 
 function start(deviceInfo, deviceManagerInfo){
+  
   require("./router/main")(app, deviceManagerInfo.url, deviceInfo);
 
   console.log(deviceInfo);

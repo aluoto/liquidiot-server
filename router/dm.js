@@ -14,7 +14,7 @@ module.exports = function(deviceManagerUrl, deviceInfo) {
 
   module.addAppInfo = function(appDescr, callback) {
 
-      var tempClient  = mqtt.connect('mqtt://130.230.16.45:1883');
+      var tempClient  = mqtt.connect('mqtt://130.230.142.101:1883');
       tempClient.on('connect', function () {
 
           tempClient.publish('device/' + deviceInfo.idFromDM + '/apps/' + appDescr.id, JSON.stringify(appDescr));
@@ -66,7 +66,7 @@ module.exports = function(deviceManagerUrl, deviceInfo) {
   
   module.updateAppInfo = function(appDescr, callback){
 
-      var tempClient  = mqtt.connect('mqtt://130.230.16.45:1883');
+      var tempClient  = mqtt.connect('mqtt://130.230.142.101:1883');
       tempClient.on('connect', function () {
 
           tempClient.publish('device/' + deviceInfo.idFromDM + '/apps/' + appDescr.id, JSON.stringify(appDescr));

@@ -37,7 +37,7 @@ module.exports = function(app, deviceManagerUrl, deviceInfo) {
   var templatesDir = "./agentServerTemplateFiles/";
 
   var mqtt = require('mqtt');
-  var client  = mqtt.connect('mqtt://130.230.16.45:1883');
+  var client  = mqtt.connect('mqtt://130.230.142.101:1883');
 
   app.use(function(req, res, next){
     var flag = false;
